@@ -38,9 +38,12 @@ func main() {
     env := config.New("custom.env")
 
     // อ่านค่า environment variables
-    dbHost := env.Str("DB_HOST", "localhost")
-    dbPort := env.Int("DB_PORT", 5432)
-    debug := env.Bool("DEBUG", false)
+    dbHost := env.Int("PORT")
+    dbHost := env.Str("APP_NAME")
+    dbHost := env.Str("DB_HOST", "localhost") 	// set default localhost
+    dbPort := env.Int("DB_PORT", 5432) 			// set default 5432
+    debug := env.Bool("DEBUG")
+    debug := env.Bool("DEBUG",false)
 
     fmt.Printf("DB Host: %s\n", dbHost)
     fmt.Printf("DB Port: %d\n", dbPort)
