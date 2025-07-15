@@ -1,16 +1,20 @@
 # Config Package
 
-Go package สำหรับจัดการ environment variables และโหลดไฟล์ .env อย่างง่ายดาย
+Go package สำหรับจัดการ configuration และโหลดไฟล์ config หลายรูปแบบอย่างง่ายดาย
 
 ## ฟีเจอร์
 
-- โหลดไฟล์ .env อัตโนมัติ
-- รองรับ default values สำหรับทุก data type
-- Type-safe methods สำหรับ string, int, และ boolean
-- สามารถใช้งานแบบ instance-based หรือ global functions
-- จัดการ comments และ empty lines ในไฟล์ .env
-- รองรับ quoted values
-- ไม่ override environment variables ที่มีอยู่แล้ว
+- **รองรับหลายรูปแบบ**: .env, .json, .yml, .yaml
+- **โหลดไฟล์ config อัตโนมัติ** ตามนามสกุลไฟล์
+- **รองรับ default values** สำหรับทุก data type
+- **Type-safe methods** สำหรับ string, int, และ boolean
+- **สามารถใช้งานแบบ instance-based หรือ global functions**
+- **Nested configuration support** สำหรับ JSON/YAML (แปลงเป็น dot notation)
+- **Array support** สำหรับ JSON/YAML (แปลงเป็น comma-separated string)
+- **จัดการ comments และ empty lines** ในไฟล์ .env
+- **รองรับ quoted values** ในไฟล์ .env
+- **Hot reload** สำหรับการเปลี่ยนแปลง config
+- **Format detection** อัตโนมัติตามนามสกุลไฟล์
 
 ## การติดตั้ง
 
@@ -31,23 +35,20 @@ import (
 )
 
 func main() {
-    // สร้าง config instance (จะโหลด .env อัตโนมัติ)
+    // โหลดไฟล์ .env (default)
     env := config.New()
 
-    // หรือระบุไฟล์ .env เอง
-    env := config.New("custom.env")
+    // หรือระบุไฟล์ config เอง
+    jsonConfig := config.New("config.json")
+    yamlConfig := config.New("config.yaml")
+    ymlConfig := config.New("app.yml")
 
-    // อ่านค่า environment variables
-    dbHost := env.Int("PORT")
-    dbHost := env.Str("APP_NAME")
-    dbHost := env.Str("DB_HOST", "localhost") 	// set default localhost
-    dbPort := env.Int("DB_PORT", 5432) 			// set default 5432
-    debug := env.Bool("DEBUG")
-    debug := env.Bool("DEBUG",false)
+    // อ่านค่า configuration
+    appName := env.Str("APP_NAME")
+    port := env.Int("PORT", 8080)        // default: 8080
+    debug := env.Bool("DEBUG", false)    // default: false
 
-    fmt.Printf("DB Host: %s\n", dbHost)
-    fmt.Printf("DB Port: %d\n", dbPort)
-    fmt.Printf("Debug: %t\n", debug)
+    fmt.Printf("App: %s, Port: %d, Debug: %t\n", appName, port, debug)
 }
 ```
 
@@ -62,56 +63,114 @@ import (
 )
 
 func main() {
-    // โหลดไฟล์ .env
-    config.LoadEnvFile() // โหลด .env
+    // โหลดไฟล์ config (รองรับทุก format)
+    config.LoadConfigFile("config.json")
     // หรือ
-    config.LoadEnvFile("custom.env") // โหลดไฟล์ที่ระบุ
+    config.LoadConfigFile("config.yaml")
+    // หรือ
+    config.LoadConfigFile() // default: .env
 
-    // อ่านค่า environment variables
-    dbHost := config.Str("DB_HOST", "localhost")
-    dbPort := config.Int("DB_PORT", 5432)
+    // อ่านค่า configuration
+    dbHost := config.Str("DATABASE_HOST", "localhost")
+    dbPort := config.Int("DATABASE_PORT", 5432)
     debug := config.Bool("DEBUG", false)
 
-    fmt.Printf("DB Host: %s\n", dbHost)
-    fmt.Printf("DB Port: %d\n", dbPort)
-    fmt.Printf("Debug: %t\n", debug)
+    fmt.Printf("DB: %s:%d, Debug: %t\n", dbHost, dbPort, debug)
 }
 ```
 
-### ตัวอย่างไฟล์ .env
+## รูปแบบไฟล์ที่รองรับ
+
+### 1. ไฟล์ .env
 
 ```env
-# Database configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME="myapp"
-DB_USER='admin'
+# Application Configuration
+APP_NAME=My Go App
+APP_PORT=8080
+APP_DEBUG=true
 
-# Application settings
-DEBUG=true
-PORT=8080
-API_KEY=your-secret-key
+# Database Configuration
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME="myapp_db"
+DATABASE_USER='postgres'
+```
 
-# Boolean values
-ENABLE_FEATURE=1
-DISABLE_CACHE=false
+### 2. ไฟล์ JSON
+
+```json
+{
+  "app": {
+    "name": "My Go App",
+    "port": 8080,
+    "debug": true
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "myapp_db"
+  },
+  "features": ["auth", "logging", "metrics"]
+}
+```
+
+**การเข้าถึง:**
+
+```go
+config.Str("APP_NAME")           // "My Go App"
+config.Int("APP_PORT")           // 8080
+config.Bool("APP_DEBUG")         // true
+config.Str("DATABASE_HOST")      // "localhost"
+config.Str("FEATURES")           // "auth,logging,metrics"
+```
+
+### 3. ไฟล์ YAML/YML
+
+```yaml
+app:
+  name: "My Go App"
+  port: 8080
+  debug: true
+
+database:
+  host: localhost
+  port: 5432
+  name: myapp_db
+
+features:
+  - auth
+  - logging
+  - metrics
+```
+
+**การเข้าถึง:**
+
+```go
+config.Str("APP_NAME")           // "My Go App"
+config.Int("APP_PORT")           // 8080
+config.Bool("APP_DEBUG")         // true
+config.Str("DATABASE_HOST")      // "localhost"
+config.Str("FEATURES")           // "auth,logging,metrics"
 ```
 
 ## API Reference
 
 ### Instance Methods
 
-#### `New(envFile ...string) *Config`
+#### `New(configFile ...string) *Config`
 
-สร้าง config instance ใหม่ และโหลดไฟล์ .env อัตโนมัติ
+สร้าง config instance ใหม่ และโหลดไฟล์ config อัตโนมัติ
+
+- รองรับ .env, .json, .yml, .yaml
+- Default: ".env"
 
 #### `Load() error`
 
-โหลดไฟล์ .env (จะไม่โหลดซ้ำถ้าโหลดแล้ว)
+โหลดไฟล์ config (จะไม่โหลดซ้ำถ้าโหลดแล้ว)
 
 #### `MustLoad()`
 
-โหลดไฟล์ .env และ panic ถ้าเกิดข้อผิดพลาด
+โหลดไฟล์ config และ panic ถ้าเกิดข้อผิดพลาด
 
 #### `Str(key string, defaultValue ...string) string`
 
@@ -132,17 +191,25 @@ DISABLE_CACHE=false
 
 #### `Reload() error`
 
-โหลดไฟล์ .env ใหม่
+โหลดไฟล์ config ใหม่ (hot reload)
 
-#### `SetFile(envFile string) error`
+#### `SetFile(configFile string) error`
 
-เปลี่ยนไฟล์ .env และโหลดใหม่
+เปลี่ยนไฟล์ config และโหลดใหม่
 
 ### Global Functions
 
+#### `LoadConfigFile(filePath ...string) error`
+
+โหลดไฟล์ config (รองรับทุก format)
+
+#### `MustLoadConfigFile(filePath ...string)`
+
+โหลดไฟล์ config และ panic ถ้าเกิดข้อผิดพลาด
+
 #### `LoadEnvFile(filePath ...string) error`
 
-โหลดไฟล์ .env (default: ".env")
+โหลดไฟล์ .env (backward compatibility)
 
 #### `MustLoadEnvFile(filePath ...string)`
 
@@ -164,22 +231,82 @@ DISABLE_CACHE=false
 
 คืนค่า environment variables ทั้งหมดเป็น map
 
+## การทำงานกับ Nested Configuration
+
+สำหรับไฟล์ JSON และ YAML nested objects จะถูกแปลงเป็น environment variables โดยใช้ dot notation และแปลงเป็น uppercase พร้อม underscore:
+
+```yaml
+database:
+  connection:
+    host: localhost
+    port: 5432
+    ssl:
+      enabled: true
+```
+
+จะกลายเป็น:
+
+- `DATABASE_CONNECTION_HOST` = "localhost"
+- `DATABASE_CONNECTION_PORT` = "5432"
+- `DATABASE_CONNECTION_SSL_ENABLED` = "true"
+
+## การทำงานกับ Arrays
+
+Arrays ใน JSON/YAML จะถูกแปลงเป็น comma-separated string:
+
+```json
+{
+  "allowed_origins": ["http://localhost:3000", "https://myapp.com"],
+  "features": ["auth", "logging", "metrics"]
+}
+```
+
+การเข้าถึง:
+
+```go
+origins := config.Str("ALLOWED_ORIGINS")  // "http://localhost:3000,https://myapp.com"
+features := config.Str("FEATURES")        // "auth,logging,metrics"
+
+// แปลงกลับเป็น slice
+originsList := strings.Split(origins, ",")
+```
+
+## ตัวอย่างการใช้งาน
+
+ดูตัวอย่างการใช้งานใน [examples/usage.go](examples/usage.go)
+
+### รันตัวอย่าง
+
+```bash
+cd examples
+go run usage.go
+```
+
 ## ข้อดี
 
 - **ง่ายต่อการใช้งาน**: API ที่เรียบง่ายและใช้งานง่าย
+- **รองรับหลายรูปแบบ**: .env, JSON, YAML ในแพ็คเกจเดียว
 - **Type Safety**: Methods ที่ type-safe สำหรับ data types ต่างๆ
 - **Flexible**: รองรับทั้ง instance-based และ global functions
 - **Default Values**: รองรับ default values สำหรับทุก method
+- **Hot Reload**: รองรับการโหลดใหม่โดยไม่ต้อง restart
+- **Nested Support**: รองรับ nested configuration สำหรับ JSON/YAML
 - **Error Handling**: จัดการ error อย่างเหมาะสม
-- **Performance**: ไม่โหลดไฟล์ .env ซ้ำ
+- **Performance**: ไม่โหลดไฟล์ config ซ้ำ
 
 ## ข้อควรรู้
 
-- ไฟล์ .env ที่ไม่มีจะไม่ทำให้เกิด error
-- Environment variables ที่มีอยู่แล้วจะไม่ถูก override
-- รองรับ comments (บรรทัดที่ขึ้นต้นด้วย #)
-- รองรับ quoted values (single และ double quotes)
+- ไฟล์ config ที่ไม่มีจะไม่ทำให้เกิด error
+- Environment variables ที่มีอยู่แล้วจะถูก override เมื่อ reload
+- รองรับ comments (บรรทัดที่ขึ้นต้นด้วย #) ในไฟล์ .env
+- รองรับ quoted values (single และ double quotes) ในไฟล์ .env
 - Empty lines จะถูกข้าม
+- JSON/YAML nested objects จะถูกแปลงเป็น uppercase environment variables พร้อม underscore
+- Arrays จะถูกแปลงเป็น comma-separated strings
+
+## Dependencies
+
+- [gopkg.in/yaml.v3](https://gopkg.in/yaml.v3) สำหรับ YAML parsing
 
 ## License
 

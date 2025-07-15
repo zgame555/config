@@ -46,6 +46,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+go.sum
 
 # Runtime data
 pids
